@@ -1,0 +1,130 @@
+---
+title: "Xtern Work Assessment"
+author: "Xtern Applicant"
+date: "10/15/2020"
+output: word_document
+---
+
+#Initial Analysis, Questions, and Assumptions
+
+Without looking at the data too in depth, I have a few questions regarding the data itself.
+The Minimum_Order attribute does not clearly display meaningful information. It's title would suggest that this is the least amount of money a person could spend at this restaurant possible, however the values, just from skimming through the data, are usually significantly greater than the Average_Cost for the same restaurant. If these were the cheapest possible orders a customer could make, then the average cost of an order would be significantly higher. I have ignored this attribute in my analysis due to a lack of information on how I can properly utilize this attribute of data.
+
+Additionally, I am making some assumptions about the data so I can more efficiently utilize it. I am assuming that Votes represents how many people voted for that restaurant to be their favorite. I am also assuming that Reviews represents how many people have left reviews rating a given restaurant on a scale of 1 to 5, and that Rating represents the average score given by these reviews. Finally, I am assuming that Average_Cost represents the average cost of a meal for 1 person at a given restaurant, and Cook_Time is the time it takes the food to come out. 
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+FoodieX = read.csv("2020-XTern-DS.csv")
+BaseRestaurants = FoodieX[which(FoodieX$Rating!="NEW" & FoodieX$Rating!="-" & FoodieX$Reviews>=1),]
+```
+#General Methodology
+
+I have created a subset of the data called BaseRestaurants, which I will be conducting my analysis on. This set represents all restaurants who have received at least 1 review and are not considered new. By analyzing this subset, we can see how other restaurants in the area may fare dependent on given features.
+
+#Conclusion 1: Cook_Time and Rating
+
+My first idea was to determine if the time it took to prepare the food had any effect on the rating a restaurant typically received. I hypothesized that there would be an inverse relationship between the time it took to create the food and the rating a restaurant received. 
+
+```{r}
+lmRating = as.numeric(BaseRestaurants$Rating)
+lmTime = as.numeric(gsub(" minutes", "", BaseRestaurants$Cook_Time))
+summary(lmRating)
+summary(lmTime)
+
+cor.test(lmRating, y=lmTime)
+
+linearModel = lm(lmTime ~ lmRating, data=BaseRestaurants)
+summary(linearModel)
+
+ratingTimePlot = ggplot(BaseRestaurants, aes(x=lmRating, y=lmTime)) + geom_point() + geom_smooth(method="lm", se=TRUE, level=0.99)
+ratingTimePlot
+```
+I created a scatterplot to visualize the data along with a line of best fit drawn using linear regression, and found the opposite to be true. There was a positive, however very weak correlation. This had me give more thought to the nature of the data, since the time to prepare food and the rating of a restaurant seemed to have a minimal effect on each other.
+
+This led me reconsider what the Cook_Time attribute represented. My initial assumption of Cook_Time was, as seen above, that it represented how long it took for the food to be served. In reality, it represented a more literal explanation of the title, exactly how long it took to prepare and serve the food. I had not factored in prep time or any steps that may occur before the food is even ordered. While the results of this analysis disprove my initial hypothesis, they do match the findings of this new assumption. It also makes logical sense, better food would require a longer time to make, and while the correlation isn't very strong, alongside the linear regression it suggests that restaurants that take longer to prepare their food receive higher ratings.
+
+In conclusion, my initial hypothesis that faster food is rated better was disproved due to new information regarding the data, and in reality food that takes longer to be prepared tends to receive better ratings.
+
+#Conclusion 2: Average_Cost and Rating
+
+After comparing Rating to Cook_Time, I decided to compare Rating to Average_Cost. I was unsure what to expect from this. While quality comes with a price as well, I could see expensive food driving off business. In the end, I hypothesized that price would have a positive correlation with ratings.
+```{r}
+signlessCost = gsub("[$ ]", "", BaseRestaurants$Average_Cost)
+lmCost = as.numeric(signlessCost)
+summary(lmCost)
+
+cor.test(lmRating, y=lmCost, na.rm = TRUE)
+
+linearModel = lm(lmCost ~ lmRating, data=BaseRestaurants)
+summary(linearModel)
+
+ratingCostPlot = ggplot(BaseRestaurants, aes(x=lmRating, y=lmCost)) + geom_point() + geom_smooth(method="lm", se=TRUE, level=0.99)
+ratingCostPlot
+```
+I used the same methodology as before to compare these two attributes. There was a weak positive correlation between the 2, as depicted by the linear regression on the scatterplot. This correlates directly with my initial hypothesis that the attributes would have a positive correlation, even if the correlation is weak.
+
+In conclusion, increased average costs for eating at a restaurant mean increased ratings. This is likely caused by the food being more expensive due to it being of a higher quality, or using better ingredients that cost more.
+
+#Conclusion 3: Location and Rating
+
+I wanted to analyze if locations in the town had better or worse restaurants due to their location. I do not have any frame of reference for how this map will look, so I hypothesize the map will have no correlation between Rating and either Longitude or Latitude.
+
+```{r}
+lmLong = as.numeric(BaseRestaurants$Longitude)
+lmLat = as.numeric(BaseRestaurants$Latitude)
+
+summary(lmLong)
+summary(lmLat)
+
+cor.test(lmRating, y=lmLong)
+cor.test(lmRating, y=lmLat)
+
+linearModelLong = lm(lmLong ~ lmRating, data=BaseRestaurants)
+linearModelLat = lm(lmLat ~ lmRating, data=BaseRestaurants)
+summary(linearModelLong)
+summary(linearModelLat)
+
+ratingLongPlot = ggplot(BaseRestaurants, aes(x=lmRating, y=lmLong)) + geom_point() + geom_smooth(method="lm", se=TRUE, level=0.99)
+ratingLongPlot
+ratingLatPlot = ggplot(BaseRestaurants, aes(x=lmRating, y=lmLat)) + geom_point() + geom_smooth(method="lm", se=TRUE, level=0.99)
+ratingLatPlot
+ratingMapPlot = ggplot(BaseRestaurants, aes(x=lmLat, y=lmLong)) + geom_point() + geom_smooth(method="lm", se=TRUE, level=0.99)
+ratingMapPlot
+```
+
+I used the same processes as before, and the analysis gave me the results I was expecting. For Longitude, there was no significant correlation with rating. For Latitude, there was some correlation with rating, but not nearly enough to be considered significant either. When comparing Latitude and Longitude, there was no visible correlation seen through the linear regression displayed either. I'm guessing the road system must look very peculiar, however, to break the scenario for a moment, I am assuming the data was randomly generated for this work assessment. The real coordinates for this reigon stretch far beyond a simple town and take up a small chunk of SouthEastern Indiana.
+
+In conclusion, the restaurant's location has no bearing on how successful it is. 
+
+
+#Conclusion 4: Votes and Rating
+
+I wanted to see if there was any correlation between the number of votes a restaurant received, assuming that each vote represents 1 person picking a restaurant as their favorite, in comparison to their rating, which depicts a score of 1 to 5. I predict a strong positive correlation, since a restaurant with a higher rating would presumably be more people's favorite restaurant to vote for.
+
+```{r}
+lmVote = as.numeric(BaseRestaurants$Votes)
+summary(lmVote)
+
+cor.test(lmRating, y=lmVote, na.rm = TRUE)
+
+linearModel = lm(lmVote ~ lmRating, data=BaseRestaurants)
+summary(linearModel)
+
+ratingVotesPlot = ggplot(BaseRestaurants, aes(x=lmRating, y=lmVote)) + geom_point() + geom_smooth(method="lm", se=TRUE, level=0.99)
+ratingVotesPlot
+```
+
+I used the same method I used for the other models and received similar results to my hypothesis. As seen on the linear regression and scatterplot, the ratings of a given restaurant share a moderately strong positive correlation with the number of votes they received.
+
+In conclusion, the number of votes a restaurant has directly correlates with their rating.
+
+#Final Analysis
+
+Overall, all of the attributes analyzed had some level of correlation with the Rating attribute except for Longitude and Latitude. This could be due to those attributes being common business choices, such as raising prices and production time to accommodate for higher quality food, or it could be due to customer preference, as shown with ratings and votes correlating.
+
+
+#Future Work
+
+Given more time, I would like to have dug into the Cuisines attribute and determine if Cuisine had any bearing on Ratings, Votes, or Cook_Time. I also would have liked to more work with the new restaurants, and see if I could produce a model that would have predicted their ratings based on their Average_Cost and Cook_Time.
